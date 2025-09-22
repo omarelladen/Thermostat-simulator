@@ -42,3 +42,4 @@
 // Temperature regulation
 #define REGULATION_INTERVAL 1000  // ms
 #define TEMP_MAX_TARGET 50 
+#define TEMP_MIN_TARGET 5

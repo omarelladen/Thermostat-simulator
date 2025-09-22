@@ -100,7 +100,7 @@ void btUp()
 
 void btDown()
 {
-	if (g_temp_target > 0)
+	if (g_temp_target > TEMP_MIN_TARGET)
 	{
 		g_temp_target--;
 		printTempTarget();
