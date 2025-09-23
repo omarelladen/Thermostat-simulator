@@ -173,7 +173,7 @@ void loop()
     const int8_t bt_pressed = checkButtonPress();
 	handleButtonPress(bt_pressed);
 	
-	// Show if is cooling 
+	// Show if it is cooling 
     if (g_temp_now >= g_temp_target)
     	printCooling(1);
     else
