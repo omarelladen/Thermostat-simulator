@@ -58,15 +58,34 @@ Start
 
 
 MainLoop
+;	Colocar a informação da dezena em PA7:PA4 e PQ3:PQ0  ; UDIV por 10 
+;	Ativar o transistor Q2
+;	Esperar 1ms
+;	Desativar o transistor Q2
+;	Esperar 1ms
+;	Colocar a informação da unidade em PA7:PA4 e PQ3:PQ0  ; MLS
+;	Ativar o transistor Q1
+;	Esperar 1ms
+;	Desativar o transistor Q1
+;	Esperar 1ms
+;	Colocar a informação dos LEDs em PA7:PA4 e PQ3:PQ0;
+;	Ativar o transistor Q3Ministério da Educação
+;	Esperar 1ms
+;	Desativar o transistor Q3
+;	Esperar 1ms
+
+;	decrementar contador
+;	se passou 1s, aumentar ou diminuir temperatural atual
+;	reiniciar contador
+
+;	se resfriando, acender PN1
+;	se aquecendo, acender PN0
+	
+
 	B MainLoop
 	
 	
 sw_down
-	MOV R0, #0
-	PUSH {LR}
-	BL PortN_Output
-	POP {LR}
-	
 	LDR R0, =TEMP_MIN_TARGET
 	CMP R11, R0
 	PUSH {LR}
@@ -75,17 +94,16 @@ sw_down
 	BX LR
 
 diminuir_setpoint
+	PUSH {LR}
+	BL Pisca_LED
+	POP {LR}
+	
 	ADD R11, #1
 	
 	BX LR
 
 
 sw_up
-	MOV R0, #1
-	PUSH {LR}
-	BL PortN_Output
-	POP {LR}
-	
 	LDR R0, =TEMP_MAX_TARGET
 	CMP R11, R0
 	PUSH {LR}
@@ -94,11 +112,39 @@ sw_up
 	BX LR
 
 aumentar_setpoint
+	PUSH {LR}
+	BL Pisca_LED
+	POP {LR}
+	
 	SUB R11, #1
 	
 	BX LR
 
 
-
+Pisca_LED
+	; acende o LED
+	MOV R0, #1
+	PUSH {LR}  					 ; empilha pra ter multiplas chamadas de funcao
+	BL PortN_Output			     ; arg esta em R0
+	POP {LR}
+	
+	; espera 1000ms
+	MOV R0, #100				 ; arg
+	PUSH {LR}
+	BL SysTick_Wait1ms			 ; arg esta em R0
+	POP {LR}
+	
+	; apaga o LED
+	MOV R0, #2_00000000          ; pra apagar o LED q acende com 2_00000010 => 2_000000(0)0
+	PUSH {LR}
+	BL PortN_Output			     ; arg esta em R0
+	POP {LR}
+	
+	
+	BX LR
+	
+	
+	
+	
     ALIGN                        ;Garante que o fim da seção está alinhada 
     END                          ;Fim do arquivo
