@@ -55,6 +55,8 @@ Start
 
 	MOV R12, #15  ; temp_now
 	MOV R11, #25  ; temp_target
+	
+	
 
 
 MainLoop
@@ -69,7 +71,7 @@ MainLoop
 ;	Desativar o transistor Q1
 ;	Esperar 1ms
 ;	Colocar a informação dos LEDs em PA7:PA4 e PQ3:PQ0;
-;	Ativar o transistor Q3Ministério da Educação
+;	Ativar o transistor Q3
 ;	Esperar 1ms
 ;	Desativar o transistor Q3
 ;	Esperar 1ms
@@ -78,64 +80,139 @@ MainLoop
 ;	se passou 1s, aumentar ou diminuir temperatural atual
 ;	reiniciar contador
 
-;	se resfriando, acender PN1
-;	se aquecendo, acender PN0
 	
+	; espera 1000ms
+	MOV R0, #1000				 ; arg
+	PUSH {LR}
+	BL SysTick_Wait1ms			 ; arg esta em R0
+	POP {LR}
+	
+	PUSH {LR}
+	BL passou_1s
+	POP {LR}
 
 	B MainLoop
+
+passou_1s
+	CMP R11, R12
 	
+	PUSH {LR}
+	BGT aumentar_temp
+	POP {LR}
 	
+	PUSH {LR}
+	BLT diminuir_temp
+	POP {LR}
+	
+	PUSH {LR}
+	BEQ chegou_setpoint
+	POP {LR}
+	
+	BX LR
+
+
+chegou_setpoint
+	
+	; apaga o LED
+	MOV R0, #2_00        
+	PUSH {LR}
+	BL PortN_Output			     
+	POP {LR}
+	
+	; acende o PN0 e PN1
+	MOV R0, #2_11
+	PUSH {LR}  					 
+	BL PortN_Output			     
+	POP {LR}
+	
+	BX LR
+
+aumentar_temp
+	ADD R12, #1
+	
+	; apaga o LED
+	MOV R0, #2_00        
+	PUSH {LR}
+	BL PortN_Output			     
+	POP {LR}
+	
+	; acende o PN0
+	MOV R0, #2_01
+	PUSH {LR}  					 
+	BL PortN_Output			     
+	POP {LR}
+	
+	BX LR
+
+diminuir_temp
+	SUB R12, #1
+	
+	; apaga o LED
+	MOV R0, #2_00        
+	PUSH {LR}
+	BL PortN_Output			     
+	POP {LR}
+	
+	; acende o PN1
+	MOV R0, #2_10
+	PUSH {LR}  					 
+	BL PortN_Output			     
+	POP {LR}
+	
+	BX LR
+
+
 sw_down
-	LDR R0, =TEMP_MIN_TARGET
-	CMP R11, R0
+	LDR R10, =TEMP_MIN_TARGET
+	CMP R11, R10
 	PUSH {LR}
 	BGT diminuir_setpoint
 	POP {LR}
 	BX LR
 
 diminuir_setpoint
-	PUSH {LR}
-	BL Pisca_LED
-	POP {LR}
-	
-	ADD R11, #1
-	
-	BX LR
-
-
-sw_up
-	LDR R0, =TEMP_MAX_TARGET
-	CMP R11, R0
-	PUSH {LR}
-	BLT aumentar_setpoint
-	POP {LR}
-	BX LR
-
-aumentar_setpoint
-	PUSH {LR}
-	BL Pisca_LED
-	POP {LR}
+;	PUSH {LR}
+;	BL Pisca_LED
+;	POP {LR}
 	
 	SUB R11, #1
 	
 	BX LR
 
 
+sw_up
+	LDR R10, =TEMP_MAX_TARGET
+	CMP R11, R10
+	PUSH {LR}
+	BLT aumentar_setpoint
+	POP {LR}
+	BX LR
+
+aumentar_setpoint
+;	PUSH {LR}
+;	BL Pisca_LED
+;	POP {LR}
+	
+	ADD R11, #1
+	
+	BX LR
+
+
 Pisca_LED
 	; acende o LED
-	MOV R0, #1
+	MOV R0, #2_01
 	PUSH {LR}  					 ; empilha pra ter multiplas chamadas de funcao
 	BL PortN_Output			     ; arg esta em R0
 	POP {LR}
 	
-	; espera 1000ms
+	; espera 100ms
 	MOV R0, #100				 ; arg
 	PUSH {LR}
 	BL SysTick_Wait1ms			 ; arg esta em R0
 	POP {LR}
 	
 	; apaga o LED
-	MOV R0, #2_00000000          ; pra apagar o LED q acende com 2_00000010 => 2_000000(0)0
+	MOV R0, #2_00          ; pra apagar o LED q acende com 2_00000010 => 2_000000(0)0
 	PUSH {LR}
 	BL PortN_Output			     ; arg esta em R0
 	POP {LR}

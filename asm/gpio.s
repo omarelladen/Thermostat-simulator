@@ -248,7 +248,7 @@ GPIOPortJ_Handler
     MOV R1, #2_01
     STR R1, [R0]
     PUSH {LR}
-    BL sw_up
+    BL sw_up  ; SW1
     POP {LR}
     B FIM_INTERRUPT
 
@@ -257,7 +257,7 @@ CHAVE2
     MOV R1, #2_10
     STR R1, [R0]
     PUSH {LR}
-    BL sw_down
+    BL sw_down  ; SW2
     POP {LR}
 
 FIM_INTERRUPT
