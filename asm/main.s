@@ -54,9 +54,11 @@ Start
 	MOV R12, #15  ; temp_now
 	MOV R11, #25  ; temp_target
 	
-	LDR R3, =  ; PQ[0:4] - abcd
-	LDR R4, =  ; PA[4:7] - efgDP
-
+	LDR R3, =  ; PQ - [0:4] - abcd
+	LDR R4, =  ; PA - [4:7] - efgDP
+	LDR R5, =  ; PP - 5 - Q1
+	LDR R6, =  ; PB - 4 - Q2
+	LDR R7, =  ; PB - 4 - Q3
 	
 MainLoop
 ;	Colocar a informação da dezena em PA7:PA4 e PQ3:PQ0  ; UDIV por 10 
@@ -64,16 +66,20 @@ MainLoop
 	BL dezena_to_bcd			 
 	POP {LR}
 
-;	Ativar o transistor Q2
-
+;	Ativar o transistor Q2 (PB4)
+	MOVT R0, #0001
+	STR R0, [R6]
+	
 ;	Esperar 1ms
 	MOV R0, #1				 
 	PUSH {LR}
 	BL SysTick_Wait1ms			 
 	POP {LR}
 	
-;	Desativar o transistor Q2
-
+;	Desativar o transistor Q2 (PB4)
+	MOVT R0, #0000
+	STR R0, [R6]
+	
 ;	Esperar 1ms
 	MOV R0, #1				 
 	PUSH {LR}
@@ -86,16 +92,20 @@ MainLoop
 	BL unidade_to_bcd			 
 	POP {LR}
 
-;	Ativar o transistor Q1
-
+;	Ativar o transistor Q1 (PP5)
+	MOVT R0, #0010
+	STR R0, [R5]
+	
 ;	Esperar 1ms
 	MOV R0, #1				 
 	PUSH {LR}
 	BL SysTick_Wait1ms			 
 	POP {LR}
 	
-;	Desativar o transistor Q1
-
+;	Desativar o transistor Q1 (PP5)
+	MOVT R0, #0000
+	STR R0, [R5]
+	
 ;	Esperar 1ms
 	MOV R0, #1				 
 	PUSH {LR}
@@ -104,8 +114,11 @@ MainLoop
 
 
 ;	Colocar a informação dos LEDs em PA7:PA4 e PQ3:PQ0;
+	
 
-;	Ativar o transistor Q3
+;	Ativar o transistor Q3 (PB5)
+	MOVT R0, #0010
+	STR R0, [R7]
 
 ;	Esperar 1ms
 	MOV R0, #1				 
@@ -113,8 +126,10 @@ MainLoop
 	BL SysTick_Wait1ms			 
 	POP {LR}
 	
-;	Desativar o transistor Q3
-
+;	Desativar o transistor Q3 (PB5)
+	MOVT R0, #0010
+	STR R0, [R7]
+	
 ;	Esperar 1ms
 	MOV R0, #1				 
 	PUSH {LR}
