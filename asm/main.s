@@ -42,6 +42,17 @@ TEMP_MIN_TARGET EQU 5
 		IMPORT SysTick_Wait1ms										
 		IMPORT GPIO_Init
         IMPORT PortN_Output
+			
+		IMPORT GPIO_PORTP_DATA_R
+		IMPORT GPIO_PORTQ_DATA_R
+		IMPORT GPIO_PORTA_DATA_R
+		IMPORT GPIO_PORTB_DATA_R
+		
+					
+		IMPORT PortP_Output
+		IMPORT PortQ_Output
+		IMPORT PortA_Output
+		IMPORT PortB_Output
 
 ; -------------------------------------------------------------------------------
 ; Função main()
@@ -52,13 +63,9 @@ Start
 
 
 	MOV R12, #15  ; temp_now
-	MOV R11, #25  ; temp_target
+	MOV R11, #25  ; setpoint
 	
-	LDR R3, =  ; PQ - [0:4] - abcd
-	LDR R4, =  ; PA - [4:7] - efgDP
-	LDR R5, =  ; PP - 5 - Q1
-	LDR R6, =  ; PB - 4 - Q2
-	LDR R7, =  ; PB - 4 - Q3
+	MOV R3, #0  ; contador
 	
 MainLoop
 ;	Colocar a informação da dezena em PA7:PA4 e PQ3:PQ0  ; UDIV por 10 
@@ -67,18 +74,22 @@ MainLoop
 	POP {LR}
 
 ;	Ativar o transistor Q2 (PB4)
-	MOVT R0, #0001
-	STR R0, [R6]
+	MOV R0, #2_00010000
+	PUSH {LR}
+	BL PortB_Output
+	POP {LR}
 	
 ;	Esperar 1ms
-	MOV R0, #1				 
+	MOV R0, #1			 
 	PUSH {LR}
 	BL SysTick_Wait1ms			 
 	POP {LR}
 	
 ;	Desativar o transistor Q2 (PB4)
-	MOVT R0, #0000
-	STR R0, [R6]
+	MOV R0, #2_00000000
+	PUSH {LR}
+	BL PortB_Output
+	POP {LR}
 	
 ;	Esperar 1ms
 	MOV R0, #1				 
@@ -92,46 +103,63 @@ MainLoop
 	BL unidade_to_bcd			 
 	POP {LR}
 
-;	Ativar o transistor Q1 (PP5)
-	MOVT R0, #0010
-	STR R0, [R5]
+;	Ativar o transistor Q3 (PB5)
+	MOV R0, #2_00100000
+	PUSH {LR}
+	BL PortB_Output
+	POP {LR}
 	
 ;	Esperar 1ms
-	MOV R0, #1				 
+	MOV R0, #1			 
 	PUSH {LR}
 	BL SysTick_Wait1ms			 
 	POP {LR}
 	
-;	Desativar o transistor Q1 (PP5)
-	MOVT R0, #0000
-	STR R0, [R5]
+;	Desativar o transistor Q3 (PB5)
+	MOV R0, #2_00000000
+	PUSH {LR}
+	BL PortB_Output
+	POP {LR}
 	
 ;	Esperar 1ms
-	MOV R0, #1				 
+	MOV R0, #1			 
 	PUSH {LR}
 	BL SysTick_Wait1ms			 
 	POP {LR}
 
 
 ;	Colocar a informação dos LEDs em PA7:PA4 e PQ3:PQ0;
+	MOV R0, R11
+	PUSH {LR}
+	BL PortA_Output
+	POP {LR}
 	
-
-;	Ativar o transistor Q3 (PB5)
-	MOVT R0, #0010
-	STR R0, [R7]
-
+	MOV R0, R11
+	PUSH {LR}
+	BL PortQ_Output
+	POP {LR}
+	
+;	Ativar o transistor Q1 (PP5)
+	MOV R0, #2_00100000
+	PUSH {LR}
+	BL PortP_Output
+	POP {LR}
+	
 ;	Esperar 1ms
-	MOV R0, #1				 
+	MOV R0, #1			 
 	PUSH {LR}
 	BL SysTick_Wait1ms			 
 	POP {LR}
 	
-;	Desativar o transistor Q3 (PB5)
-	MOVT R0, #0010
-	STR R0, [R7]
+
+	;	Desativar o transistor Q1 (PP5)
+	MOV R0, #2_00000000
+	PUSH {LR}
+	BL PortP_Output
+	POP {LR}
 	
 ;	Esperar 1ms
-	MOV R0, #1				 
+	MOV R0, #1			 
 	PUSH {LR}
 	BL SysTick_Wait1ms			 
 	POP {LR}
@@ -141,21 +169,20 @@ MainLoop
 ;	se passou 1s, aumentar ou diminuir temperatural atual
 ;	reiniciar contador
 
-	
-	; espera 1000ms
-	MOV R0, #1000				 
+	ADD R3, #6
+	CMP R3, #1000
+	 
 	PUSH {LR}
-	BL SysTick_Wait1ms			 
+	BLGE passou_1s
 	POP {LR}
 	
-	PUSH {LR}
-	BL passou_1s
-	POP {LR}
+
 
 	B MainLoop
 
 dezena_to_bcd
-	UDIV R8, R12, #10
+	MOV R0, #10
+	UDIV R8, R12, R0
 	
 	PUSH {LR}
 	BL bin_to_bcd
@@ -164,8 +191,9 @@ dezena_to_bcd
 	BX LR
 
 unidade_to_bcd
-	UDIV R9, R12, #10
-	MLS R8, R9, #10, R12
+	MOV R0, #10
+	UDIV R9, R12, R0
+	MLS R8, R9, R0, R12
 	
 	PUSH {LR}
 	BL bin_to_bcd
@@ -176,126 +204,129 @@ unidade_to_bcd
 bin_to_bcd
 	CMP R8, #0
 	PUSH {LR}
-	BEQ bcd_0
+	BLEQ bcd_0
 	POP {LR}
 	
 	CMP R8, #1
 	PUSH {LR}
-	BEQ bcd_1
+	BLEQ bcd_1
 	POP {LR}
 	
 	CMP R8, #2
 	PUSH {LR}
-	BEQ bcd_2
+	BLEQ bcd_2
 	POP {LR}
 	
 	CMP R8, #3
 	PUSH {LR}
-	BEQ bcd_3
+	BLEQ bcd_3
 	POP {LR}
 	
 	CMP R8, #4
 	PUSH {LR}
-	BEQ bcd_4
+	BLEQ bcd_4
 	POP {LR}
 	
 	CMP R8, #5
 	PUSH {LR}
-	BEQ bcd_5
+	BLEQ bcd_5
 	POP {LR}
 	
 	CMP R8, #6
 	PUSH {LR}
-	BEQ bcd_6
+	BLEQ bcd_6
 	POP {LR}
 	
 	CMP R8, #7
 	PUSH {LR}
-	BEQ bcd_7
+	BLEQ bcd_7
 	POP {LR}
 	
 	CMP R8, #8
 	PUSH {LR}
-	BEQ bcd_8
+	BLEQ bcd_8
 	POP {LR}
 	
 	CMP R8, #9
 	PUSH {LR}
-	BEQ bcd_9
+	BLEQ bcd_9
 	POP {LR}
 	
-	STR R1, [R3]
-	STR R2, [R4]
+	MOV R0, R1
+	PUSH {LR}
+	BL PortQ_Output			     
+	POP {LR}
+	
+	MOV R0, R4
+	PUSH {LR}
+	BL PortA_Output			     
+	POP {LR}
 	
 	BX LR
 
 bcd_0
 	MOV R1, #2_1111	; abcd
-	MOVT R2, #2_0011 ; efgDP
+	MOV R4, #2_00110000
 	
 	BX LR
 	
 bcd_1
 	MOV R1, #2_0110	; abcd
-	MOVT R2, #2_0000 ; efgDP
+	MOV R4, #2_00000000
 	
 	BX LR
 	
 bcd_2
 	MOV R1, #2_1011	; abcd
-	MOVT R2, #2_0001 ; efgDP
+	MOV R4, #2_01010000
 	
 	BX LR
 	
 bcd_3
 	MOV R1, #2_1111	; abcd
-	MOVT R2, #2_0100 ; efgDP
+	MOV R4, #2_01000000
 	
 	BX LR
 	
 bcd_4
 	MOV R1, #2_0110	; abcd
-	MOVT R2, #2_0110 ; efgDP
+	MOV R4, #2_01100000
 	
 	BX LR
 	
 bcd_5
 	MOV R1, #2_1101	; abcd
-	MOVT R2, #2_0010 ; efgDP
+	MOV R4, #2_01100000
 	
 	BX LR
 	
 bcd_6
 	MOV R1, #2_1101	; abcd
-	MOVT R2, #2_0011 ; efgDP
+	MOV R4, #2_01110000
 
 	BX LR
 	
 bcd_7
 	MOV R1, #2_0111	; abcd
-	MOVT R2, #2_0000 ; efgDP
+	MOV R4, #2_00000000
 	
 	BX LR
 	
 bcd_8
 	MOV R1, #2_1111	; abcd
-	MOVT R2, #2_0111 ; efgDP
+	MOV R4, #2_01110000
 
 	BX LR
 	
 bcd_9
 	MOV R1, #2_1111	; abcd
-	MOVT R2, #2_0110 ; efgDP
+	MOV R4, #2_01100000
 
 	BX LR
 
-str_bcd
-	STR R1, [R3]
-	STR R2, [R4]
-	
-	BX LR
 	
 passou_1s
+	MOV R3, #0
 	CMP R11, R12
 	
 	PUSH {LR}
@@ -370,6 +401,7 @@ sw_down
 	PUSH {LR}
 	BGT diminuir_setpoint
 	POP {LR}
+	
 	BX LR
 
 diminuir_setpoint
@@ -388,6 +420,7 @@ sw_up
 	PUSH {LR}
 	BLT aumentar_setpoint
 	POP {LR}
+	
 	BX LR
 
 aumentar_setpoint
