@@ -2,79 +2,125 @@
 ; Desenvolvido para a placa EK-TM4C1294XL
 ; Prof. Guilherme Peron
 ; 15/03/2018
-; Este programa espera o usu·rio apertar a chave USR_SW1 e/ou a chave USR_SW2.
-; Caso o usu·rio pressione a chave USR_SW1, acender· o LED2. Caso o usu·rio pressione 
-; a chave USR_SW2, acender· o LED1. Caso as duas chaves sejam pressionadas, os dois 
+; Este programa espera o usu√°rio apertar a chave USR_SW1 e/ou a chave USR_SW2.
+; Caso o usu√°rio pressione a chave USR_SW1, acender√° o LED2. Caso o usu√°rio pressione 
+; a chave USR_SW2, acender√° o LED1. Caso as duas chaves sejam pressionadas, os dois 
 ; LEDs acendem.
 
 ; -------------------------------------------------------------------------------
-        THUMB                        ; InstruÁıes do tipo Thumb-2
+        THUMB                        ; Instru√ß√µes do tipo Thumb-2
 ; -------------------------------------------------------------------------------
 
 ; -------------------------------------------------------------------------------
-; ¡rea de Dados - DeclaraÁıes de vari·veis
+; √Årea de Dados - Declara√ß√µes de vari√°veis
 		AREA  DATA, ALIGN=2
-		; Se alguma vari·vel for chamada em outro arquivo
-		;EXPORT  <var> [DATA,SIZE=<tam>]   ; Permite chamar a vari·vel <var> a 
+		; Se alguma vari√°vel for chamada em outro arquivo
+		;EXPORT  <var> [DATA,SIZE=<tam>]   ; Permite chamar a vari√°vel <var> a 
 		                                   ; partir de outro arquivo
-;<var>	SPACE <tam>                        ; Declara uma vari·vel de nome <var>
+;<var>	SPACE <tam>                        ; Declara uma vari√°vel de nome <var>
                                            ; de <tam> bytes a partir da primeira 
-                                           ; posiÁ„o da RAM		
+                                           ; posi√ß√£o da RAM		
 
 TEMP_MAX_TARGET EQU 50 
 TEMP_MIN_TARGET EQU 5
 ; -------------------------------------------------------------------------------
-; ¡rea de CÛdigo - Tudo abaixo da diretiva a seguir ser· armazenado na memÛria de 
-;                  cÛdigo
+; √Årea de C√≥digo - Tudo abaixo da diretiva a seguir ser√° armazenado na mem√≥ria de 
+;                  c√≥digo
         AREA    |.text|, CODE, READONLY, ALIGN=2
 
-		; Se alguma funÁ„o do arquivo for chamada em outro arquivo	
-        EXPORT Start                ; Permite chamar a funÁ„o Start a partir de 
+		; Se alguma fun√ß√£o do arquivo for chamada em outro arquivo	
+        EXPORT Start                ; Permite chamar a fun√ß√£o Start a partir de 
 			                        ; outro arquivo. No caso startup.s
 									
-		; Se chamar alguma funÁ„o externa	
+		; Se chamar alguma fun√ß√£o externa	
         ;IMPORT <func>              ; Permite chamar dentro deste arquivo uma 
-									; funÁ„o <func>
+									; fun√ß√£o <func>
 		EXPORT sw_up
 		EXPORT sw_down
-		IMPORT  PLL_Init
-		IMPORT  SysTick_Init
-		IMPORT  SysTick_Wait1ms										
-		IMPORT  GPIO_Init
-        IMPORT  PortN_Output
+		IMPORT PLL_Init
+		IMPORT SysTick_Init
+		IMPORT SysTick_Wait1ms										
+		IMPORT GPIO_Init
+        IMPORT PortN_Output
 
 ; -------------------------------------------------------------------------------
-; FunÁ„o main()
+; Fun√ß√£o main()
 Start  		
 	BL PLL_Init                  ;Chama a subrotina para alterar o clock do microcontrolador para 80MHz
 	BL SysTick_Init              ;Chama a subrotina para inicializar o SysTick
 	BL GPIO_Init                 ;Chama a subrotina que inicializa os GPIO
 
 
-
-
 	MOV R12, #15  ; temp_now
 	MOV R11, #25  ; temp_target
 	
+	LDR R3, =  ; PQ[0:4] - abcd
+	LDR R4, =  ; PA[4:7] - efgDP
+
 	
-
-
 MainLoop
-;	Colocar a informaÁ„o da dezena em PA7:PA4 e PQ3:PQ0  ; UDIV por 10 
+;	Colocar a informa√ß√£o da dezena em PA7:PA4 e PQ3:PQ0  ; UDIV por 10 
+	PUSH {LR}
+	BL dezena_to_bcd			 
+	POP {LR}
+
 ;	Ativar o transistor Q2
+
 ;	Esperar 1ms
+	MOV R0, #1				 
+	PUSH {LR}
+	BL SysTick_Wait1ms			 
+	POP {LR}
+	
 ;	Desativar o transistor Q2
+
 ;	Esperar 1ms
-;	Colocar a informaÁ„o da unidade em PA7:PA4 e PQ3:PQ0  ; MLS
+	MOV R0, #1				 
+	PUSH {LR}
+	BL SysTick_Wait1ms			 
+	POP {LR}
+
+
+;	Colocar a informa√ß√£o da unidade em PA7:PA4 e PQ3:PQ0  ; MLS
+	PUSH {LR}
+	BL unidade_to_bcd			 
+	POP {LR}
+
 ;	Ativar o transistor Q1
+
 ;	Esperar 1ms
+	MOV R0, #1				 
+	PUSH {LR}
+	BL SysTick_Wait1ms			 
+	POP {LR}
+	
 ;	Desativar o transistor Q1
+
 ;	Esperar 1ms
-;	Colocar a informaÁ„o dos LEDs em PA7:PA4 e PQ3:PQ0;
+	MOV R0, #1				 
+	PUSH {LR}
+	BL SysTick_Wait1ms			 
+	POP {LR}
+
+
+;	Colocar a informa√ß√£o dos LEDs em PA7:PA4 e PQ3:PQ0;
+
 ;	Ativar o transistor Q3
+
 ;	Esperar 1ms
+	MOV R0, #1				 
+	PUSH {LR}
+	BL SysTick_Wait1ms			 
+	POP {LR}
+	
 ;	Desativar o transistor Q3
+
 ;	Esperar 1ms
+	MOV R0, #1				 
+	PUSH {LR}
+	BL SysTick_Wait1ms			 
+	POP {LR}
+
 
 ;	decrementar contador
 ;	se passou 1s, aumentar ou diminuir temperatural atual
@@ -82,9 +128,9 @@ MainLoop
 
 	
 	; espera 1000ms
-	MOV R0, #1000				 ; arg
+	MOV R0, #1000				 
 	PUSH {LR}
-	BL SysTick_Wait1ms			 ; arg esta em R0
+	BL SysTick_Wait1ms			 
 	POP {LR}
 	
 	PUSH {LR}
@@ -93,6 +139,147 @@ MainLoop
 
 	B MainLoop
 
+dezena_to_bcd
+	UDIV R8, R12, #10
+	
+	PUSH {LR}
+	BL bin_to_bcd
+	POP {LR}
+	
+	BX LR
+
+unidade_to_bcd
+	UDIV R9, R12, #10
+	MLS R8, R9, #10, R12
+	
+	PUSH {LR}
+	BL bin_to_bcd
+	POP {LR}
+	
+	BX LR
+
+bin_to_bcd
+	CMP R8, #0
+	PUSH {LR}
+	BEQ bcd_0
+	POP {LR}
+	
+	CMP R8, #1
+	PUSH {LR}
+	BEQ bcd_1
+	POP {LR}
+	
+	CMP R8, #2
+	PUSH {LR}
+	BEQ bcd_2
+	POP {LR}
+	
+	CMP R8, #3
+	PUSH {LR}
+	BEQ bcd_3
+	POP {LR}
+	
+	CMP R8, #4
+	PUSH {LR}
+	BEQ bcd_4
+	POP {LR}
+	
+	CMP R8, #5
+	PUSH {LR}
+	BEQ bcd_5
+	POP {LR}
+	
+	CMP R8, #6
+	PUSH {LR}
+	BEQ bcd_6
+	POP {LR}
+	
+	CMP R8, #7
+	PUSH {LR}
+	BEQ bcd_7
+	POP {LR}
+	
+	CMP R8, #8
+	PUSH {LR}
+	BEQ bcd_8
+	POP {LR}
+	
+	CMP R8, #9
+	PUSH {LR}
+	BEQ bcd_9
+	POP {LR}
+	
+	STR R1, [R3]
+	STR R2, [R4]
+	
+	BX LR
+
+bcd_0
+	MOV R1, #2_1111	; abcd
+	MOVT R2, #2_0011 ; efgDP
+	
+	BX LR
+	
+bcd_1
+	MOV R1, #2_0110	; abcd
+	MOVT R2, #2_0000 ; efgDP
+	
+	BX LR
+	
+bcd_2
+	MOV R1, #2_1011	; abcd
+	MOVT R2, #2_0001 ; efgDP
+	
+	BX LR
+	
+bcd_3
+	MOV R1, #2_1111	; abcd
+	MOVT R2, #2_0100 ; efgDP
+	
+	BX LR
+	
+bcd_4
+	MOV R1, #2_0110	; abcd
+	MOVT R2, #2_0110 ; efgDP
+	
+	BX LR
+	
+bcd_5
+	MOV R1, #2_1101	; abcd
+	MOVT R2, #2_0010 ; efgDP
+	
+	BX LR
+	
+bcd_6
+	MOV R1, #2_1101	; abcd
+	MOVT R2, #2_0011 ; efgDP
+
+	BX LR
+	
+bcd_7
+	MOV R1, #2_0111	; abcd
+	MOVT R2, #2_0000 ; efgDP
+	
+	BX LR
+	
+bcd_8
+	MOV R1, #2_1111	; abcd
+	MOVT R2, #2_0111 ; efgDP
+
+	BX LR
+	
+bcd_9
+	MOV R1, #2_1111	; abcd
+	MOVT R2, #2_0110 ; efgDP
+
+	BX LR
+
+str_bcd
+	STR R1, [R3]
+	STR R2, [R4]
+	
+	BX LR
+	
 passou_1s
 	CMP R11, R12
 	
@@ -223,5 +410,5 @@ Pisca_LED
 	
 	
 	
-    ALIGN                        ;Garante que o fim da seÁ„o est· alinhada 
+    ALIGN                        ;Garante que o fim da se√ß√£o est√° alinhada 
     END                          ;Fim do arquivo
