@@ -1,464 +1,302 @@
-; gpio.s
+; utils.s
 ; Desenvolvido para a placa EK-TM4C1294XL
-; Prof. Guilherme Peron
-; 19/03/2018
+; CÛdigo que apresenta algumas funcionalidades:
+; - Altera a frequÍncia do barramento usando o PLL
+; - Configura o Systick para utilizar delays precisos
 
-; -------------------------------------------------------------------------------
-        THUMB                        ; Instru√ß√µes do tipo Thumb-2
-; -------------------------------------------------------------------------------
-; Declara√ß√µes EQU - Defines
-; ========================
-; Defini√ß√µes dos Registradores Gerais
-SYSCTL_RCGCGPIO_R	 EQU	0x400FE608
-SYSCTL_PRGPIO_R		 EQU    0x400FEA08
-    
-; ========================
-; NVIC
-NVIC_EN1_R           EQU    0xE000E104
-NVIC_EN2_R           EQU    0xE000E108
-NVIC_PRI18_R		 EQU    0xE000E448
-NVIC_PRI12_R		 EQU    0xE000E430 	
-; ========================
-; Defini√ß√µes dos Ports
-; PORT K
-GPIO_PORTK_IS_R      	EQU    0x40061404
-GPIO_PORTK_IBE_R      	EQU    0x40061408
-GPIO_PORTK_IEV_R      	EQU    0x4006140C
-GPIO_PORTK_IM_R      	EQU    0x40061410
-GPIO_PORTK_RIS_R      	EQU    0x40061414
-GPIO_PORTK_ICR_R      	EQU    0x4006141C    
-GPIO_PORTK_LOCK_R    	EQU    0x40061520
-GPIO_PORTK_CR_R      	EQU    0x40061524
-GPIO_PORTK_AMSEL_R   	EQU    0x40061528
-GPIO_PORTK_PCTL_R    	EQU    0x4006152C
-GPIO_PORTK_DIR_R     	EQU    0x40061400
-GPIO_PORTK_AFSEL_R   	EQU    0x40061420
-GPIO_PORTK_DEN_R     	EQU    0x4006151C
-GPIO_PORTK_PUR_R     	EQU    0x40061510	
-GPIO_PORTK_DATA_R    	EQU    0x400613FC
-GPIO_PORTK              EQU    2_00001000000000
+; Editado por Guilherme Peron
+; 15/03/2018
+; 26/08/2020
+; Copyright 2014 by Jonathan W. Valvano, valvano@mail.utexas.edu
 
-; PORT M
-GPIO_PORTM_IS_R      	EQU    0x40063404
-GPIO_PORTM_IBE_R      	EQU    0x40063408
-GPIO_PORTM_IEV_R      	EQU    0x4006340C
-GPIO_PORTM_IM_R      	EQU    0x40063410
-GPIO_PORTM_RIS_R      	EQU    0x40063414
-GPIO_PORTM_ICR_R      	EQU    0x4006341C    
-GPIO_PORTM_LOCK_R    	EQU    0x40063520
-GPIO_PORTM_CR_R      	EQU    0x40063524
-GPIO_PORTM_AMSEL_R   	EQU    0x40063528
-GPIO_PORTM_PCTL_R    	EQU    0x4006352C
-GPIO_PORTM_DIR_R     	EQU    0x40063400
-GPIO_PORTM_AFSEL_R   	EQU    0x40063420
-GPIO_PORTM_DEN_R     	EQU    0x4006351C
-GPIO_PORTM_PUR_R     	EQU    0x40063510	
-GPIO_PORTM_DATA_R    	EQU    0x400633FC
-GPIO_PORTM              EQU    2_00100000000000
-	
-; PORT N
-GPIO_PORTN_LOCK_R    	EQU    0x40064520
-GPIO_PORTN_CR_R      	EQU    0x40064524
-GPIO_PORTN_AMSEL_R   	EQU    0x40064528
-GPIO_PORTN_PCTL_R    	EQU    0x4006452C
-GPIO_PORTN_DIR_R     	EQU    0x40064400
-GPIO_PORTN_AFSEL_R   	EQU    0x40064420
-GPIO_PORTN_DEN_R     	EQU    0x4006451C
-GPIO_PORTN_PUR_R     	EQU    0x40064510	
-GPIO_PORTN_DATA_R    	EQU    0x400643FC
-GPIO_PORTN              EQU    2_001000000000000	
-	
-; PORT J
-GPIO_PORTJ_IS_R      	EQU    0x40060404
-GPIO_PORTJ_IBE_R      	EQU    0x40060408
-GPIO_PORTJ_IEV_R      	EQU    0x4006040C
-GPIO_PORTJ_IM_R      	EQU    0x40060410
-GPIO_PORTJ_RIS_R      	EQU    0x40060414
-GPIO_PORTJ_ICR_R      	EQU    0x4006041C 
-GPIO_PORTJ_LOCK_R    	EQU    0x40060520
-GPIO_PORTJ_CR_R      	EQU    0x40060524
-GPIO_PORTJ_AMSEL_R   	EQU    0x40060528
-GPIO_PORTJ_PCTL_R    	EQU    0x4006052C
-GPIO_PORTJ_DIR_R     	EQU    0x40060400
-GPIO_PORTJ_AFSEL_R   	EQU    0x40060420
-GPIO_PORTJ_DEN_R     	EQU    0x4006051C
-GPIO_PORTJ_PUR_R     	EQU    0x40060510	
-GPIO_PORTJ_DATA_R    	EQU    0x400603FC
-GPIO_PORTJ              EQU    2_000000100000000
+; -------------------------------------------------------------------------------------------------------------------------
+; PLL
+; -------------------------------------------------------------------------------------------------------------------------
+; A frequÍncia do barramento ser· 80MHz
+; Representa o divisor para inicializar o PLL para a frequÍncia desejada
+; FrequÍncia do barramento È 480MHz/(PSYSDIV+1) = 480MHz/(5+1) = 80 MHz
+PSYSDIV                       EQU 5
 
-; PORT A
-GPIO_PORTA_IS_R      	EQU    0x40058404
-GPIO_PORTA_IBE_R      	EQU    0x40058408
-GPIO_PORTA_IEV_R      	EQU    0x4005840C
-GPIO_PORTA_IM_R      	EQU    0x40058410
-GPIO_PORTA_RIS_R      	EQU    0x40058414
-GPIO_PORTA_ICR_R      	EQU    0x4005841C 
-GPIO_PORTA_LOCK_R    	EQU    0x40058520
-GPIO_PORTA_CR_R      	EQU    0x40058524
-GPIO_PORTA_AMSEL_R   	EQU    0x40058528
-GPIO_PORTA_PCTL_R    	EQU    0x4005852C
-GPIO_PORTA_DIR_R     	EQU    0x40058400
-GPIO_PORTA_AFSEL_R   	EQU    0x40058420
-GPIO_PORTA_DEN_R     	EQU    0x4005851C
-GPIO_PORTA_PUR_R     	EQU    0x40058510	
-GPIO_PORTA_DATA_R    	EQU    0x400583FC
-GPIO_PORTA              EQU    2_000000000000001
+SYSCTL_RIS_R                  EQU 0x400FE050
+SYSCTL_RIS_MOSCPUPRIS         EQU 0x00000100  ; MOSC Power Up Raw Interrupt Status
+SYSCTL_MOSCCTL_R              EQU 0x400FE07C
+SYSCTL_MOSCCTL_PWRDN          EQU 0x00000008  ; Power Down
+SYSCTL_MOSCCTL_NOXTAL         EQU 0x00000004  ; No Crystal Connected
+SYSCTL_RSCLKCFG_R             EQU 0x400FE0B0
+SYSCTL_RSCLKCFG_MEMTIMU       EQU 0x80000000  ; Memory Timing Register Update
+SYSCTL_RSCLKCFG_NEWFREQ       EQU 0x40000000  ; New PLLFREQ Accept
+SYSCTL_RSCLKCFG_USEPLL        EQU 0x10000000  ; Use PLL
+SYSCTL_RSCLKCFG_PLLSRC_M      EQU 0x0F000000  ; PLL Source
+SYSCTL_RSCLKCFG_PLLSRC_MOSC   EQU 0x03000000  ; MOSC is the PLL input clock source
+SYSCTL_RSCLKCFG_OSCSRC_M      EQU 0x00F00000  ; Oscillator Source
+SYSCTL_RSCLKCFG_OSCSRC_MOSC   EQU 0x00300000  ; MOSC is oscillator source
+SYSCTL_RSCLKCFG_PSYSDIV_M     EQU 0x000003FF  ; PLL System Clock Divisor
+SYSCTL_MEMTIM0_R              EQU 0x400FE0C0
+SYSCTL_DSCLKCFG_R             EQU 0x400FE144
+SYSCTL_DSCLKCFG_DSOSCSRC_M    EQU 0x00F00000  ; Deep Sleep Oscillator Source
+SYSCTL_DSCLKCFG_DSOSCSRC_MOSC EQU 0x00300000  ; MOSC
+SYSCTL_PLLFREQ0_R             EQU 0x400FE160
+SYSCTL_PLLFREQ0_PLLPWR        EQU 0x00800000  ; PLL Power
+SYSCTL_PLLFREQ0_MFRAC_M       EQU 0x000FFC00  ; PLL M Fractional Value
+SYSCTL_PLLFREQ0_MINT_M        EQU 0x000003FF  ; PLL M Integer Value
+SYSCTL_PLLFREQ0_MFRAC_S       EQU 10
+SYSCTL_PLLFREQ0_MINT_S        EQU 0
+SYSCTL_PLLFREQ1_R             EQU 0x400FE164
+SYSCTL_PLLFREQ1_Q_M           EQU 0x00001F00  ; PLL Q Value
+SYSCTL_PLLFREQ1_N_M           EQU 0x0000001F  ; PLL N Value
+SYSCTL_PLLFREQ1_Q_S           EQU 8
+SYSCTL_PLLFREQ1_N_S           EQU 0
+SYSCTL_PLLSTAT_R              EQU 0x400FE168
+SYSCTL_PLLSTAT_LOCK           EQU 0x00000001  ; PLL Lock
 
-; PORT Q
-GPIO_PORTQ_IS_R      	EQU    0x40066404
-GPIO_PORTQ_IBE_R      	EQU    0x40066408
-GPIO_PORTQ_IEV_R      	EQU    0x4006640C
-GPIO_PORTQ_IM_R      	EQU    0x40066410
-GPIO_PORTQ_RIS_R      	EQU    0x40066414
-GPIO_PORTQ_ICR_R      	EQU    0x4006641C 
-GPIO_PORTQ_LOCK_R    	EQU    0x40066520
-GPIO_PORTQ_CR_R      	EQU    0x40066524
-GPIO_PORTQ_AMSEL_R   	EQU    0x40066528
-GPIO_PORTQ_PCTL_R    	EQU    0x4006652C
-GPIO_PORTQ_DIR_R     	EQU    0x40066400
-GPIO_PORTQ_AFSEL_R   	EQU    0x40066420
-GPIO_PORTQ_DEN_R     	EQU    0x4006651C
-GPIO_PORTQ_PUR_R     	EQU    0x40066510	
-GPIO_PORTQ_DATA_R    	EQU    0x400663FC
-GPIO_PORTQ              EQU    2_100000000000000
-	
-; PORT P
-GPIO_PORTP_IS_R      	EQU    0x40065404
-GPIO_PORTP_IBE_R      	EQU    0x40065408
-GPIO_PORTP_IEV_R      	EQU    0x4006540C
-GPIO_PORTP_IM_R      	EQU    0x40065410
-GPIO_PORTP_RIS_R      	EQU    0x40065414
-GPIO_PORTP_ICR_R      	EQU    0x4006541C 
-GPIO_PORTP_LOCK_R    	EQU    0x40065520
-GPIO_PORTP_CR_R      	EQU    0x40065524
-GPIO_PORTP_AMSEL_R   	EQU    0x40065528
-GPIO_PORTP_PCTL_R    	EQU    0x4006552C
-GPIO_PORTP_DIR_R     	EQU    0x40065400
-GPIO_PORTP_AFSEL_R   	EQU    0x40065420
-GPIO_PORTP_DEN_R     	EQU    0x4006551C
-GPIO_PORTP_PUR_R     	EQU    0x40065510	
-GPIO_PORTP_DATA_R    	EQU    0x400653FC
-GPIO_PORTP              EQU    2_010000000000000
-	
-; PORT B
-GPIO_PORTB_IS_R      	EQU    0x40059404
-GPIO_PORTB_IBE_R      	EQU    0x40059408
-GPIO_PORTB_IEV_R      	EQU    0x4005940C
-GPIO_PORTB_IM_R      	EQU    0x40059410
-GPIO_PORTB_RIS_R      	EQU    0x40059414
-GPIO_PORTB_ICR_R      	EQU    0x4005941C 
-GPIO_PORTB_LOCK_R    	EQU    0x40059520
-GPIO_PORTB_CR_R      	EQU    0x40059524
-GPIO_PORTB_AMSEL_R   	EQU    0x40059528
-GPIO_PORTB_PCTL_R    	EQU    0x4005952C
-GPIO_PORTB_DIR_R     	EQU    0x40059400
-GPIO_PORTB_AFSEL_R   	EQU    0x40059420
-GPIO_PORTB_DEN_R     	EQU    0x4005951C
-GPIO_PORTB_PUR_R     	EQU    0x40059510	
-GPIO_PORTB_DATA_R    	EQU    0x400593FC
-GPIO_PORTB              EQU    2_000000000000010
-
-; -------------------------------------------------------------------------------
-; √Årea de C√≥digo - Tudo abaixo da diretiva a seguir ser√° armazenado na mem√≥ria de 
-;                  c√≥digo
         AREA    |.text|, CODE, READONLY, ALIGN=2
+        THUMB
+        EXPORT  PLL_Init
 
-		; Se alguma fun√ß√£o do arquivo for chamada em outro arquivo	
-        EXPORT GPIO_Init            ; Permite chamar GPIO_Init de outro arquivo
-		EXPORT PortN_Output			; Permite chamar PortN_Output de outro arquivo
-        EXPORT GPIOPortJ_Handler
+;------------PLL_Init------------
+; Configura o sistema para utilizar o clock do PLL
+; Entrada: Nenhum
+; SaÌda: Nenhum
+; Modifica: R0, R1, R2, R3
+PLL_Init
+    ; CapÌtulo 5 do Datasheet
+    ; 1) Depois que a configuraÁ„o for pronta, o PIOSC provÍ o clock do sistema. Este,
+    ;    passo garante que se a funÁ„o j· tenha sido chamada antes, o sistema desabilite
+    ;    o clock do PLL antes de configur·-lo novamente.
+    LDR R1, =SYSCTL_RSCLKCFG_R                 ; R1 = SYSCTL_RSCLKCFG_R (ponteiro)
+    LDR R0, [R1]                               ; R0 = [R1] (value)
+    BIC R0, R0, #SYSCTL_RSCLKCFG_USEPLL        ; R0 = R0&~SYSCTL_RSCLKCFG_USEPLL (limpar o bit USEPLL bit para n„o clockar pelo PLL)
+    STR R0, [R1]                               ; [R1] = R0
+    ; 2) Ligar o MOSC limpando o bit NOXTAL bit no registrador SYSCTL_MOSCCTL_R.
+    ; 3) Como o modo cristal È requerido, limpar o bit de PWRDN. O datasheet pede 
+	;     para fazer estas duas operaÁıes em um ˙nico acesso de escrita ao SYSCTL_MOSCCTL_R.
+    LDR R1, =SYSCTL_MOSCCTL_R                  ; R1 = SYSCTL_MOSCCTL_R (pointer)
+    LDR R0, [R1]                               ; R0 = [R1] (value)
+    BIC R0, R0, #SYSCTL_MOSCCTL_NOXTAL         ; R0 = R0&~SYSCTL_MOSCCTL_NOXTAL (limpa o bit NOXTAL para usar o cristal externo de 25 MHz)
+    BIC R0, R0, #SYSCTL_MOSCCTL_PWRDN          ; R0 = R0&~SYSCTL_MOSCCTL_PWRDN (limpa o bit PWRDN para ligar o oscilador principal)
+    STR R0, [R1]                               ; [R1] = R0 (ambas alteraÁıes em um ˙nico acesso)
+    ;    Esperar pelo bit MOSCPUPRIS ser setado no registrador SYSCTL_RIS_R register, indicando
+	;    que o cristal modo MOSC est· pronto
+    LDR R1, =SYSCTL_RIS_R                      ; R1 = SYSCTL_RIS_R (pointer)
+PLL_Init_step3loop
+    LDR R0, [R1]                               ; R0 = [R1] (value)
+    ANDS R0, R0, #SYSCTL_RIS_MOSCPUPRIS        ; R0 = R0&SYSCTL_RIS_MOSCPUPRIS
+    BEQ PLL_Init_step3loop                     ; if(R0 == 0), keep polling
 
-		EXPORT GPIO_PORTP_DATA_R
-		EXPORT GPIO_PORTQ_DATA_R
-		EXPORT GPIO_PORTA_DATA_R
-		EXPORT GPIO_PORTB_DATA_R
-			
-		EXPORT PortP_Output
-		EXPORT PortQ_Output
-		EXPORT PortA_Output
-		EXPORT PortB_Output
-			
-
-		IMPORT EnableInterrupts
-        IMPORT DisableInterrupts
-		IMPORT SysTick_Wait1ms
-		IMPORT sw_up
-		IMPORT sw_down
-									
-
-;--------------------------------------------------------------------------------
-; Fun√ß√£o GPIO_Init
-; Par√¢metro de entrada: N√£o tem
-; Par√¢metro de sa√≠da: N√£o tem
-GPIO_Init
-;=====================
-; 1. Ativar o clock para a porta setando o bit correspondente no registrador RCGCGPIO,
-; ap√≥s isso verificar no PRGPIO se a porta est√° pronta para uso.
-; enable clock to GPIOF at clock gating register
-            LDR     R0, =SYSCTL_RCGCGPIO_R  		;Carrega o endere√ßo do registrador RCGCGPIO
-			MOV		R1, #GPIO_PORTN                 ;Seta o bit da porta N
-			ORR     R1, #GPIO_PORTJ
-			ORR     R1, #GPIO_PORTP
-			ORR     R1, #GPIO_PORTQ
-			ORR     R1, #GPIO_PORTA
-			ORR     R1, #GPIO_PORTB
-            STR     R1, [R0]						;Move para a mem√≥ria os bits das portas no endere√ßo do RCGCGPIO
- 
-            LDR     R0, =SYSCTL_PRGPIO_R			;Carrega o endere√ßo do PRGPIO para esperar os GPIO ficarem prontos
-EsperaGPIO  LDR     R1, [R0]						;L√™ da mem√≥ria o conte√∫do do endere√ßo do registrador
-			MOV     R2, #GPIO_PORTN                 ;Seta os bits correspondentes √†s portas para fazer a compara√ß√£o
-			ORR     R2, #GPIO_PORTJ
-			ORR     R2, #GPIO_PORTP
-			ORR     R2, #GPIO_PORTQ
-			ORR     R2, #GPIO_PORTA
-			ORR     R2, #GPIO_PORTB
-            TST     R1, R2							;ANDS de R1 com R2
-            BEQ     EsperaGPIO					    ;Se o flag Z=1, volta para o la√ßo. Sen√£o continua executando
- 
-; 2. Limpar o AMSEL para desabilitar a anal√≥gica
-            MOV     R1, #0x00					;Guarda no registrador AMSEL da porta K da mem√≥ria
-			LDR     R0, =GPIO_PORTJ_AMSEL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTN_AMSEL_R		;Carrega o R0 com o endere√ßo do AMSEL para a porta N
-            STR     R1, [R0]					    ;Guarda no registrador AMSEL da porta N da mem√≥ria
- 			LDR     R0, =GPIO_PORTP_AMSEL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTQ_AMSEL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTA_AMSEL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTB_AMSEL_R
-			STR     R1, [R0]
-			
-; 3. Limpar PCTL para selecionar o GPIO
-            MOV     R1, #0x00					    ;Colocar 0 no registrador para selecionar o modo GPIO
-            LDR     R0, =GPIO_PORTJ_PCTL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTN_PCTL_R      ;Carrega o R0 com o endere√ßo do PCTL para a porta N
-            STR     R1, [R0]                        ;Guarda no registrador PCTL da porta N da mem√≥ria
-            LDR     R0, =GPIO_PORTP_PCTL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTQ_PCTL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTA_PCTL_R
-			STR     R1, [R0]
-			LDR     R0, =GPIO_PORTB_PCTL_R
-			STR     R1, [R0]
-			
-; 4. DIR para 0 se for entrada, 1 se for sa√≠da
-			LDR     R0, =GPIO_PORTN_DIR_R		;Carrega o R0 com o endere√ßo do DIR para a porta N
-			MOV     R1, #2_00000001					;PN1 & PN0 para LED
-			ORR     R1, #2_00000010					;Enviar o valor 0x03 para habilitar os pinos como sa√≠da
-            STR     R1, [R0]						;Guarda no registrador
-			; O certo era verificar os outros bits da PM para n√£o transformar entradas em sa√≠das desnecess√°rias
-            LDR     R0, =GPIO_PORTJ_DIR_R	   		;Carrega o R0 com o endere√ßo do DIR para a porta M
-            MOV     R1, #0x00               		;Colocar 0 no registrador DIR para funcionar como entrada
-            STR     R1, [R0]
-
-			LDR     R0, =GPIO_PORTP_DIR_R		
-			MOV     R1, #2_00100000					
-            STR     R1, [R0]
-			
-			LDR     R0, =GPIO_PORTQ_DIR_R		
-			MOV     R1, #2_00001111					
-            STR     R1, [R0]
-
-			LDR     R0, =GPIO_PORTA_DIR_R		
-			MOV     R1, #2_11110000					
-            STR     R1, [R0]
-			
-			LDR     R0, =GPIO_PORTB_DIR_R		
-			MOV     R1, #2_00110000					
-            STR     R1, [R0]
-
-; 5. Limpar os bits AFSEL para 0 para selecionar GPIO 
-;    Sem fun√ß√£o alternativa
-            MOV     R1, #0x00						;Colocar o valor 0 para n√£o setar fun√ß√£o alternativa
-            LDR     R0, =GPIO_PORTJ_AFSEL_R     ;Carrega o endere√ßo do AFSEL da porta K
-            STR     R1, [R0]                        ;Escreve na porta			
-            LDR     R0, =GPIO_PORTN_AFSEL_R		;Carrega o endere√ßo do AFSEL da porta N
-            STR     R1, [R0]                       ;Escreve na porta
-			LDR     R0, =GPIO_PORTP_AFSEL_R		
-            STR     R1, [R0]
-			LDR     R0, =GPIO_PORTQ_AFSEL_R		
-            STR     R1, [R0] 
-			LDR     R0, =GPIO_PORTA_AFSEL_R		
-            STR     R1, [R0] 
-			LDR     R0, =GPIO_PORTB_AFSEL_R		
-            STR     R1, [R0]
-			
-; 6. Setar os bits de DEN para habilitar I/O digital
-            LDR     R0, =GPIO_PORTJ_DEN_R			;Carrega o endere√ßo do DEN
-            LDR     R1, [R0]                            ;Ler da mem√≥ria o registrador GPIO_PORTN_DEN_R
-			MOV     R2, #2_00000011                           
-            ORR     R1, R2                              
-            STR     R1, [R0]                            ;Escreve no registrador da mem√≥ria funcionalidade digital
-			
-            LDR     R0, =GPIO_PORTN_DEN_R			;Carrega o endere√ßo do DEN
-            LDR     R1, [R0]							;Ler da mem√≥ria o registrador GPIO_PORTN_DEN_R
-			MOV     R2, #2_00000001	
-			ORR     R2, #2_00000010						;Habilitar funcionalidade digital na DEN os bits 0 e 1
-            ORR     R1, R2
-            STR     R1, [R0]							;Escreve no registrador da mem√≥ria funcionalidade digital 
-			
-			LDR     R0, =GPIO_PORTP_DEN_R			
-            LDR     R1, [R0]                        
-			MOV     R2, #2_00100000                           
-            ORR     R1, R2                              
-            STR     R1, [R0] 
-
-			LDR     R0, =GPIO_PORTQ_DEN_R			
-            LDR     R1, [R0]                        
-			MOV     R2, #2_00001111                           
-            ORR     R1, R2                              
-            STR     R1, [R0]
-			
-			LDR     R0, =GPIO_PORTA_DEN_R			
-            LDR     R1, [R0]                        
-			MOV     R2, #2_11110000                           
-            ORR     R1, R2                              
-            STR     R1, [R0]
-			
-			LDR     R0, =GPIO_PORTB_DEN_R			
-            LDR     R1, [R0]                        
-			MOV     R2, #2_00110000                           
-            ORR     R1, R2                              
-            STR     R1, [R0]
-			
-; 7. Para habilitar resistor de pull-up interno, setar PUR para 1
-			LDR     R0, =GPIO_PORTJ_PUR_R			    ;Carrega o endere√ßo do PUR para a porta M
-			MOV     R1, #2_00000011						;Habilitar funcionalidade digital de resistor de pull-up 
-            STR     R1, [R0]							;Escreve no registrador da mem√≥ria do resistor de pull-up
-
-;Interrup√ß√µes
-; 8. Desabilitar a interrup√ß√£o no registrador IM
-			LDR     R0, =GPIO_PORTJ_IM_R			    ;Carrega o endere√ßo do IM para a porta M
-			MOV     R1, #2_00							;Desabilitar as interrup√ß√µes  
-            STR     R1, [R0]							;Escreve no registrador
-            
-; 9. Configurar o tipo de interrup√ß√£o por borda no registrador IS
-			LDR     R0, =GPIO_PORTJ_IS_R			;Carrega o endere√ßo do IS para a porta M
-			MOV     R1, #2_00							;Por Borda  
-            STR     R1, [R0]							;Escreve no registrador
-
-; 10. Configurar  borda √∫nica no registrador IBE
-			LDR     R0, =GPIO_PORTJ_IBE_R				;Carrega o endere√ßo do IBE para a porta M
-			MOV     R1, #2_00							;Borda √önica  
-            STR     R1, [R0]							;Escreve no registrador
-
-; 11. Configurar  borda de descida (bot√£o pressionado) no registrador IEV
-			LDR     R0, =GPIO_PORTJ_IEV_R				;Carrega o endere√ßo do IEV para a porta M
-			MOV     R1, #2_11                			;Ambos os botoes acionam na borda de descida  
-            STR     R1, [R0]							;Escreve no registrador
-; 
-			LDR     R0, =GPIO_PORTJ_ICR_R				
-			MOV     R1, #2_11							  
-            STR     R1, [R0]							
-           
-; 12. Habilitar a interrup√ß√£o no registrador IM
-			LDR     R0, =GPIO_PORTJ_IM_R				;Carrega o endere√ßo do IM para a porta M
-			MOV     R1, #2_11							;Habilitar as interrup√ß√µes  
-            STR     R1, [R0]							;Escreve no registrador
-            
-;Interrup√ß√£o n√∫mero 72            
-; 13. Setar a prioridade no NVIC
-			LDR     R0, =NVIC_PRI12_R           		;Carrega o do NVIC para o grupo que tem o M entre 72 e 75
-			MOV     R1, #3  		                    ;Prioridade 3
-			LSL     R1, R1, #29							;Desloca 5 bits para a esquerda j√° que o M √© o primeiro byte do PRI18
-            STR     R1, [R0]							;Escreve no registrador da mem√≥ria
-
-; 14. Habilitar a interrup√ß√£o no NVIC
-			LDR     R0, =NVIC_EN1_R           			;Carrega o do NVIC para o grupo que tem o M entre 64 e 95
-			MOV     R1, #1
-			LSL     R1, #19								;Desloca 8 bits para a esquerda j√° que o M √© a interrup√ß√£o do bit 8 no EN2
-            STR     R1, [R0]							;Escreve no registrador da mem√≥ria
+    ; 4) Setar os campos OSCSRC e PLLSRC para 0x3 no registrador SYSCTL_RSCLKCFG_R
+    ;    no offset 0x0B0.
+    LDR R1, =SYSCTL_RSCLKCFG_R                 ; R1 = SYSCTL_RSCLKCFG_R (pointer)
+    LDR R0, [R1]                               ; R0 = [R1] (value)
+    BIC R0, R0, #SYSCTL_RSCLKCFG_OSCSRC_M      ; R0 = R0&~SYSCTL_RSCLKCFG_OSCSRC_M (limpar o campo system run/sleep clock source)
+    ADD R0, R0, #SYSCTL_RSCLKCFG_OSCSRC_MOSC   ; R0 = R0 + SYSCTL_RSCLKCFG_OSCSRC_MOSC (configurar para temporariamente obter o clock do oscilador de 25MHz principal)
+    BIC R0, R0, #SYSCTL_RSCLKCFG_PLLSRC_M      ; R0 = R0&~SYSCTL_RSCLKCFG_PLLSRC_M (limpar o campo PLL clock source)
+    ADD R0, R0, #SYSCTL_RSCLKCFG_PLLSRC_MOSC   ; R0 = R0 + SYSCTL_RSCLKCFG_PLLSRC_MOSC (configurar para o clock do PLL do oscilador principal)
+    STR R0, [R1]                               ; [R1] = R0
+    ; 5) Se a aplicaÁ„o tambÈm necessita que o MOSC seja a fonte de clock para deep-sleep
+    ;    ent„o programar o campo DSOSCSRC no registrador SYSCTL_DSCLKCFG_R para 0x3.
+    LDR R1, =SYSCTL_DSCLKCFG_R                 ; R1 = SYSCTL_DSCLKCFG_R (pointer)
+    LDR R0, [R1]                               ; R0 = [R1] (value)
+    BIC R0, R0, #SYSCTL_DSCLKCFG_DSOSCSRC_M    ; R0 = R0&~SYSCTL_DSCLKCFG_DSOSCSRC_M (clear system deep-sleep clock source field)
+    ADD R0, R0, #SYSCTL_DSCLKCFG_DSOSCSRC_MOSC ; R0 = R0 + SYSCTL_DSCLKCFG_DSOSCSRC_MOSC (configure to get deep-sleep clock from main oscillator)
+    STR R0, [R1]                               ; [R1] = R0
+    ; 6) Escrever os registradores SYSCTL_PLLFREQ0_R e SYSCTL_PLLFREQ1_R com os valores de
+    ;    Q, N, MINT, e MFRAC para configurar as configuraÁıes desejadas da frequÍncia de VCO.
+    ;    ************
+    ;    fVC0 = (fXTAL/(Q + 1)/(N + 1))*(MINT + (MFRAC/1,024))
+    ;    fVCO = 480,000,000 Hz (arbitrary, but presumably as small as needed)
+	;    Para uma frequÍncia que n„o seja um divisor inteiro de 480 MHz, mudar esta seÁ„o
+FXTAL  EQU 25000000                 ; fixa, o cristal est· soldado no Launchpad
+Q      EQU        0
+N      EQU        4                 ; escolhido para ser a frequÍncia de referÍncia entre 4 e 30 MHz
+MINT   EQU       96                 ; 480,000,000 = (25,000,000/(0 + 1)/(4 + 1))*(96 + (0/1,024))
+MFRAC  EQU        0                 ; zero para reduzir o jitter
+    ;    SysClk = fVCO / (PSYSDIV + 1)
+SYSCLK EQU (FXTAL/(Q+1)/(N+1))*(MINT+MFRAC/1024)/(PSYSDIV+1)
+    LDR R1, =SYSCTL_PLLFREQ0_R                 ; R1 = SYSCTL_PLLFREQ0_R (ponteiro)
+    LDR R0, [R1]                               ; R0 = [R1] (valor)
+    LDR R3, =SYSCTL_PLLFREQ0_MFRAC_M           ; R3 = SYSCTL_PLLFREQ0_MFRAC_M (m·scar)
+    BIC R0, R0, R3                             ; R0 = R0&~SYSCTL_PLLFREQ0_MFRAC_M (limpar o campo MFRAC)
+    LDR R3, =(MFRAC<<SYSCTL_PLLFREQ0_MFRAC_S)  ; R3 = (MFRAC<<SYSCTL_PLLFREQ0_MFRAC_S) (valor deslocado)
+    ADD R0, R0, R3                             ; R0 = R0 + (MFRAC<<SYSCTL_PLLFREQ0_MFRAC_S) (configurar MFRAC como definido acima)
+    LDR R3, =SYSCTL_PLLFREQ0_MINT_M            ; R3 = SYSCTL_PLLFREQ0_MINT_M (m·scara)
+    BIC R0, R0, R3                             ; R0 = R0&~SYSCTL_PLLFREQ0_MINT_M (limpar o campo MINT)
+    ADD R0, R0, #(MINT<<SYSCTL_PLLFREQ0_MINT_S); R0 = R0 + (MINT<<SYSCTL_PLLFREQ0_MINT_S) (configurar MINT como definido acima)
+    STR R0, [R1]                               ; [R1] = R0 (MFRAC e MINT alteraram mas n„o est„o fixados ainda)
+    LDR R1, =SYSCTL_PLLFREQ1_R                 ; R1 = SYSCTL_PLLFREQ1_R (ponteiro)
+    LDR R0, [R1]                               ; R0 = [R1] (value)
+    BIC R0, R0, #SYSCTL_PLLFREQ1_Q_M           ; R0 = R0&~SYSCTL_PLLFREQ1_Q_M (limpar o campo Q)
+    ADD R0, R0, #(Q<<SYSCTL_PLLFREQ1_Q_S)      ; R0 = R0 + (Q<<SYSCTL_PLLFREQ1_Q_S) (configurar Q como definido acima)
+    BIC R0, R0, #SYSCTL_PLLFREQ1_N_M           ; R0 = R0&~SYSCTL_PLLFREQ1_N_M (limpar o campo N)
+    ADD R0, R0, #(N<<SYSCTL_PLLFREQ1_N_S)      ; R0 = R0 + (N<<SYSCTL_PLLFREQ1_N_S) (configurar N como definido acima)
+    STR R0, [R1]                               ; [R1] = R0 (Q e N alteraram mas n„o est„o fixados ainda)
+    LDR R1, =SYSCTL_PLLFREQ0_R                 ; R1 = SYSCTL_PLLFREQ0_R (ponteiro)
+    LDR R0, [R1]                               ; R0 = [R1] (valor)
+    ORR R0, R0, #SYSCTL_PLLFREQ0_PLLPWR        ; R0 = R0|SYSCTL_PLLFREQ0_PLLPWR (ligar a energia para o PLL)
+    STR R0, [R1]                               ; [R1] = R0
+    LDR R1, =SYSCTL_RSCLKCFG_R                 ; R1 = SYSCTL_RSCLKCFG_R (ponteiro)
+    LDR R0, [R1]                               ; R0 = [R1] (valor)
+    ORR R0, R0, #SYSCTL_RSCLKCFG_NEWFREQ       ; R0 = R0|SYSCTL_RSCLKCFG_NEWFREQ (fixar as mudanÁas no registrador)
+    STR R0, [R1]                               ; [R1] = R0
+    ; 7) Escrever o registrador SYSCTL_MEMTIM0_R para a nova configuraÁ„o de clock.
+    ;    ************
+    ;    Configurar os par‚metros de tempo para as memÛrias Flash e EEPROM que 
+	;    dependem da frequÍncia do clock do sistema. Ver a Tabela 5-12 do datasheet.
+    LDR R1, =SYSCTL_MEMTIM0_R                  ; R1 = SYSCTL_MEMTIM0_R (ponteiro)
+    LDR R0, [R1]                               ; R0 = [R1] (valor)
+    LDR R3, =0x03EF03EF                        ; R3 = 0x03EF03EF (m·scara)
+    BIC R0, R0, R3                             ; R0 = R0&~0x03EF03EF (limpar os campos EBCHT, EBCE, EWS, FBCHT, FBCE, e FWS fields)
+    LDR R2, =SYSCLK                            ; R2 = (FXTAL/(Q+1)/(N+1))*(MINT+MFRAC/1024)/(PSYSDIV+1)
+    LDR R3, =120000000                          ; R3 = 80,000,000 (value)
+    CMP R2, R3                                 ; È R2 (SysClk) <= R3 (120,000,000 Hz)?
+    BLS PLL_Init_step7fullspeed                ; se sim, pular o prÛximo teste
+PLL_Init_step7toofast                          ; 120 MHz < SysClk: "too fast"
+    ; Um configuraÁ„o È inv·lida e o PLL n„o pode operar mais r·pido que 120MHz.
+    ; Pula o resto da inicializaÁ„o, levando o sistema a operar pelo MOSC
+    ; que È o cristal de 25MHz.
+    BX  LR                                     ; retorna
+PLL_Init_step7fullspeed                        ; 100 MHz < SysClk <= 120 MHz: "full speed"
+    LDR R3, =100000000                         ; R3 = 100,000,000 (valor)
+    CMP R2, R3                                 ; È R2 (SysClk) <= R3 (100,000,000 Hz)?
+    BLS PLL_Init_step7veryfast                 ; se sim, pula o prÛximo teste
+    LDR R3, =0x01850185                        ; R3 = 0x01850185 (valores deslocados)
+    ADD R0, R0, R3                             ; R0 = R0 + 0x01850185 (FBCHT/EBCHT = 6, FBCE/EBCE = 0, FWS/EWS = 5)
+    B   PLL_Init_step7done                     ; branch incondicional para o fim
+PLL_Init_step7veryfast                         ; 80 MHz < SysClk <= 100 MHz: "very fast"
+    LDR R3, =80000000                          ; R3 = 80,000,000 (valor)
+    CMP R2, R3                                 ; È R2 (SysClk) <= R3 (80,000,000 Hz)?
+    BLS PLL_Init_step7fast                     ; se sim, pula o prÛximo teste
+    LDR R3, =0x01440144                        ; R3 = 0x01440144 (valores deslocados)
+    ADD R0, R0, R3                             ; R0 = R0 + 0x01440144 (FBCHT/EBCHT = 5, FBCE/EBCE = 0, FWS/EWS = 4)
+    B   PLL_Init_step7done                     ; branch incondicional para o fim
+PLL_Init_step7fast                             ; 60 MHz < SysClk <= 80 MHz: "fast"
+    LDR R3, =60000000                          ; R3 = 60,000,000 (valor)
+    CMP R2, R3                                 ; È R2 (SysClk) <= R3 (60,000,000 Hz)?
+    BLS PLL_Init_step7medium                   ; se sim, pula o prÛximo teste
+    LDR R3, =0x01030103                        ; R3 = 0x01030103 (valores deslocados)
+    ADD R0, R0, R3                             ; R0 = R0 + 0x01030103 (FBCHT/EBCHT = 4, FBCE/EBCE = 0, FWS/EWS = 3)
+    B   PLL_Init_step7done                     ; branch incondicional para o fim
+PLL_Init_step7medium                           ; 40 MHz < SysClk <= 60 MHz: "medium"
+    LDR R3, =40000000                          ; R3 = 40,000,000 (valor)
+    CMP R2, R3                                 ; È R2 (SysClk) <= R3 (40,000,000 Hz)?
+    BLS PLL_Init_step7slow                     ; se sim, pula o prÛximo teste
+    ADD R0, R0, #0x00C200C2                    ; R0 = R0 + 0x00C200C2 (FBCHT/EBCHT = 3, FBCE/EBCE = 0, FWS/EWS = 2)
+    B   PLL_Init_step7done                     ; branch incondicional para o fim
+PLL_Init_step7slow                             ; 16 MHz < SysClk <= 40 MHz: "slow"
+    LDR R3, =16000000                          ; R3 = 16,000,000 (value)
+    CMP R2, R3                                 ; È R2 (SysClk) <= R3 (16,000,000 Hz)?
+    BLS PLL_Init_step7veryslow                 ; se sim, pula o prÛximo teste
+    ADD R0, R0, #0x00810081                    ; R0 = R0 + 0x00810081 (FBCHT/EBCHT = 2, FBCE/EBCE = 1, FWS/EWS = 1)
+    B   PLL_Init_step7done                     ; branch incondicional para o fim
+PLL_Init_step7veryslow                         ; SysClk == 16 MHz: "very slow"
+    LDR R3, =16000000                          ; R3 = 16,000,000 (value)
+    CMP R2, R3                                 ; È R2 (SysClk) < R3 (16,000,000 Hz)?
+    BLO PLL_Init_step7extremelyslow            ; se sim, pula o prÛximo teste
+    ADD R0, R0, #0x00200020                    ; R0 = R0 + 0x00200020 (FBCHT/EBCHT = 0, FBCE/EBCE = 1, FWS/EWS = 0)
+    B   PLL_Init_step7done                     ; branch incondicional para o fim
+PLL_Init_step7extremelyslow                    ; SysClk < 16 MHz: "extremely slow"
+    ADD R0, R0, #0x00000000                    ; R0 = R0 + 0x00000000 (FBCHT/EBCHT = 0, FBCE/EBCE = 0, FWS/EWS = 0)
+PLL_Init_step7done
+    STR R0, [R1]                               ; [R1] = R0 (SYSCTL_MEMTIM0_R alterado mas n„o fixado ainda)
+    ; 8) Espera pelo registrador SYSCTL_PLLSTAT_R indicar que o PLL atingiu travamento
+    ;    no novo ponto de operaÁ„o (ou que um perÌodo de timeout passou e o travamento
+    ;    falhou, que no caso uma condiÁ„o de erro existe e esta sequÍncia È abandonada
+    LDR R1, =SYSCTL_PLLSTAT_R                  ; R1 = SYSCTL_PLLSTAT_R (pointer)
+    MOV R2, #0                                 ; R2 = 0 (timeout counter)
+    MOV R3, #0xFFFF                            ; R3 = 0xFFFF (value)
+PLL_Init_step8loop
+    LDR R0, [R1]                               ; R0 = [R1] (value)
+    ANDS R0, R0, #SYSCTL_PLLSTAT_LOCK          ; R0 = R0&SYSCTL_PLLSTAT_LOCK
+    BNE PLL_Init_step8done                     ; se (R0 != 0), terminar polling
+    ADD R2, R2, #1                             ; R2 = R2 + 1 (incrementar o contador de timeout)
+    CMP R2, R3                                 ; se (R2 < 0xFFFF), continuar o polling
+    BLO PLL_Init_step8loop
+    ; O PLL nunca travou ou n„o est· ligado.
+	; Pular o resto da inicializaÁ„o, levando o sistema ser clockado pelo MOSC,
+	; que È um cristal de 25MHz.
+    BX  LR                                     ; return
+PLL_Init_step8done
+    ; 9)Escrever o valor do PSYSDIV no registrador SYSCTL_RSCLKCFG_R, setar o bit USEPLL para
+    ;   ser habilitado e setar o bit MEMTIMU.
+    LDR R1, =SYSCTL_RSCLKCFG_R                 ; R1 = SYSCTL_RSCLKCFG_R (ponteiro)
+    LDR R0, [R1]                               ; R0 = [R1] (valor)
+    LDR R3, =SYSCTL_RSCLKCFG_PSYSDIV_M         ; R3 = SYSCTL_RSCLKCFG_PSYSDIV_M (mascara)
+    BIC R0, R0, R3                             ; R0 = R0&~SYSCTL_RSCLKCFG_PSYSDIV_M (limpar o campo PSYSDIV)
+    ADD R0, R0, #(PSYSDIV&SYSCTL_RSCLKCFG_PSYSDIV_M); R0 = R0 + (PSYSDIV&SYSCTL_RSCLKCFG_PSYSDIV_M) (configurar PSYSDIV como definido acima)
+    ORR R0, R0, #SYSCTL_RSCLKCFG_MEMTIMU       ; R0 = R0|SYSCTL_RSCLKCFG_MEMTIMU (setar o bit MEMTIMU para atualizar os par‚metros de temporizaÁ„o de memÛria)
+    ORR R0, R0, #SYSCTL_RSCLKCFG_USEPLL        ; R0 = R0|SYSCTL_RSCLKCFG_USEPLL (setar o bit USEPLL para pegar o clock do PLL)
+    STR R0, [R1]                               ; [R1] = R0 (execuÁ„o e acesso s„o suspensas enquanto as atualizaÁıes na temporizaÁ„o da memÛria s„o atualizadas)
+    BX  LR                                     ; return
 
 
-			BX  LR
-
-
-; -------------------------------------------------------------------------------
-; Fun√ß√£o PortN_Output
-; Par√¢metro de entrada: R0 --> se os BIT1 e BIT0 est√£o ligado ou desligado
-; Par√¢metro de sa√≠da: N√£o tem
-PortN_Output
-	LDR	R1, =GPIO_PORTN_DATA_R		        ;Carrega o valor do offset do data register
-	;Read-Modify-Write para escrita
-	LDR R2, [R1]
-	BIC R2, #2_00000011                     ;Primeiro limpamos os dois bits do lido da porta R2 = R2 & 11111100
-	ORR R0, R0, R2                          ;Fazer o OR do lido pela porta com o par√¢metro de entrada
-	STR R0, [R1]                            ;Escreve na porta N o barramento de dados dos pinos [N5-N0]
+; -------------------------------------------------------------------------------------------------------------------------
+; SYSTICK
+; -------------------------------------------------------------------------------------------------------------------------
+NVIC_ST_CTRL_R        EQU 0xE000E010
+NVIC_ST_RELOAD_R      EQU 0xE000E014
+NVIC_ST_CURRENT_R     EQU 0xE000E018
+; -------------------------------------------------------------------------------------------------------------------------	
+        EXPORT  SysTick_Init
+		EXPORT  SysTick_Wait1ms
+;------------SysTick_Init------------
+; Configura o sistema para utilizar o SysTick para delays
+; Entrada: Nenhum
+; SaÌda: Nenhum
+; Modifica: R0, R1
+SysTick_Init
+	LDR R1, =NVIC_ST_CTRL_R			; R1 = &NVIC_ST_CTRL_R (ponteiro)
+	MOV R0, #0 						; desabilita Systick durante a configuraÁ„o
+	STR R0, [R1]					; escreve no endereÁo de memÛria do perifÈrico
+	LDR R1, =NVIC_ST_RELOAD_R 		; R1 = &NVIC_ST_RELOAD_R (pointeiro)
+	LDR R0, =0x00FFFFFF; 			; valor m·ximo de recarga 2^24 ticks
+	STR R0, [R1] 					; escreve no endereÁo de memÛria do perifÈrico o NVIC_ST_RELOAD_M
+	LDR R1, =NVIC_ST_CURRENT_R 		; R1 = &NVIC_ST_CURRENT_R (ponteiro)
+	MOV R0, #0 						; qualquer escrita no endereÁo NVIC_ST_CURRENT_R o limpa
+	STR R0, [R1] 					; limpa o contador
+	LDR R1, =NVIC_ST_CTRL_R 		; habilita o SysTick com o clock do core
+	MOV R0, #0x05					; ENABLE | CLK_SRC
+	STR R0, [R1] 					; Seta os bits de ENABLE e CLK_SRC na memÛria
+	BX LR
 	
-	BX LR									;Retorno
+;------------SysTick_Wait------------
+; Atraso de tempo utilizando processador ocupado
+; Entrada: R0 -> par‚metro de delay em unidades do clock do core (12.5ns)
+; SaÌda: Nenhum
+; Modifica: R0
+SysTick_Wait
+	PUSH {R1, R3}						; Salva os valores de R1 e R3 externos
+	LDR R1, =NVIC_ST_RELOAD_R 			; R1 = &NVIC_ST_RELOAD_RSUB R0 (ponteiro)
+	SUB R0, #1                          
+	STR R0, [R1] 						; delay-1, n˙mero de contagens para esperar
+	LDR R1, =NVIC_ST_CTRL_R 			; R1 = &NVIC_ST_CTRL_R
+SysTick_Wait_loop
+	LDR R3, [R1] 						; R3 = &NVIC_ST_CTRL_R (ponteiro)
+	ANDS R3, R3, #0x00010000 			; O bit COUNT est· setado? (Bit 16)
+	BEQ SysTick_Wait_loop               ; Se sim permanece no loop
+	POP {R1, R3}						; Restaura
+	BX LR                               ; Se n„o, retorna
 
-PortP_Output
-	LDR	R1, =GPIO_PORTP_DATA_R		        ;Carrega o valor do offset do data register
-	;Read-Modify-Write para escrita
-	LDR R2, [R1]
-	BIC R2, #2_00100000                     ;Primeiro limpamos os dois bits do lido da porta R2 = R2 & 11111100
-	ORR R0, R0, R2                          ;Fazer o OR do lido pela porta com o par√¢metro de entrada
-	STR R0, [R1]                            ;Escreve na porta N o barramento de dados dos pinos [N5-N0]
-	
-	BX LR									;Retorno
+;------------SysTick_Wait1ms------------
+; tempo de atraso usando processador ocupado. Assume um clock de 80 MHz
+; Entrada: R0 --> N˙mero de vezes para contar 1ms.
+; SaÌda: N„o tem
+; Modifica: R0
+DELAY1MS EQU 80000 ; n˙mero de ciclos de clock para contar 1ms (assumindo 80 MHz)
+	               ; 80000 x 12,5 ns = 1 ms
 
-PortQ_Output
-	LDR	R1, =GPIO_PORTQ_DATA_R		        ;Carrega o valor do offset do data register
-	;Read-Modify-Write para escrita
-	LDR R2, [R1]
-	BIC R2, #2_00001111                     ;Primeiro limpamos os dois bits do lido da porta R2 = R2 & 11111100
-	ORR R0, R0, R2                          ;Fazer o OR do lido pela porta com o par√¢metro de entrada
-	STR R0, [R1]                            ;Escreve na porta N o barramento de dados dos pinos [N5-N0]
-	
-	BX LR									;Retorno
+SysTick_Wait1ms
+	PUSH {R4, LR} 						; salva o valor atual de R4 e Link Register
+	MOVS R4, R0 						; R4 = R0  numEsperasRestantes com atualizaÁ„o dos flags
+	BEQ SysTick_Wait1ms_done 			; Se o numEsperasRestantes == 0, vai para o fim
+SysTick_Wait1ms_loop					
+	LDR R0, =DELAY1MS 					; R0 = DELAY1MS (n˙mero de ticks para contar 1ms)
+	BL SysTick_Wait 					; chama a rotina para esperar por 1ms
+	SUBS R4, R4, #1 					; R4 = R4 - 1; numEsperasRestantes--
+	BHI SysTick_Wait1ms_loop 			; se (numEsperasRestantes > 0), espera mais 1ms
+SysTick_Wait1ms_done
+	POP {R4, PC}                        ;return
 
-PortA_Output
-	LDR	R1, =GPIO_PORTA_DATA_R		        ;Carrega o valor do offset do data register
-	;Read-Modify-Write para escrita
-	LDR R2, [R1]
-	BIC R2, #2_11110000                     ;Primeiro limpamos os dois bits do lido da porta R2 = R2 & 11111100
-	ORR R0, R0, R2                          ;Fazer o OR do lido pela porta com o par√¢metro de entrada
-	STR R0, [R1]                            ;Escreve na porta N o barramento de dados dos pinos [N5-N0]
-	
-	BX LR									;Retorno
-
-PortB_Output
-	LDR	R1, =GPIO_PORTB_DATA_R		        ;Carrega o valor do offset do data register
-	;Read-Modify-Write para escrita
-	LDR R2, [R1]
-	BIC R2, #2_00110000                     ;Primeiro limpamos os dois bits do lido da porta R2 = R2 & 11111100
-	ORR R0, R0, R2                          ;Fazer o OR do lido pela porta com o par√¢metro de entrada
-	STR R0, [R1]                            ;Escreve na porta N o barramento de dados dos pinos [N5-N0]
-	
-	BX LR									;Retorno
-
-
-; -------------------------------------------------------------------------------
-; Fun√ß√£o ISR GPIOPortJ_Handler (Tratamento da interrup√ß√£o)
-GPIOPortJ_Handler
-    LDR R0, =GPIO_PORTJ_RIS_R
-    LDR R1, [R0]
-    CMP R1, #2_01
-    BNE CHAVE2
-    LDR R0, =GPIO_PORTJ_ICR_R
-    MOV R1, #2_01
-    STR R1, [R0]
-    PUSH {LR}
-    BL sw_up  ; SW1
-    POP {LR}
-    B FIM_INTERRUPT
-
-CHAVE2
-    LDR R0, =GPIO_PORTJ_ICR_R
-    MOV R1, #2_10
-    STR R1, [R0]
-    PUSH {LR}
-    BL sw_down  ; SW2
-    POP {LR}
-
-FIM_INTERRUPT
-    BX LR
-	 
-     
-
-    ALIGN                           ; garante que o fim da se√ß√£o est√° alinhada 
-    END                             ; fim do arquivo
+; -------------------------------------------------------------------------------------------------------------------------
+; Fim do Arquivo
+; -------------------------------------------------------------------------------------------------------------------------
+    ALIGN                        ;Garante que o fim da seÁ„o est· alinhada 
+    END                          ;Fim do arquivo

@@ -2,39 +2,39 @@
 ; Desenvolvido para a placa EK-TM4C1294XL
 ; Prof. Guilherme Peron
 ; 15/03/2018
-; Este programa espera o usu√°rio apertar a chave USR_SW1 e/ou a chave USR_SW2.
-; Caso o usu√°rio pressione a chave USR_SW1, acender√° o LED2. Caso o usu√°rio pressione 
-; a chave USR_SW2, acender√° o LED1. Caso as duas chaves sejam pressionadas, os dois 
+; Este programa espera o usu·rio apertar a chave USR_SW1 e/ou a chave USR_SW2.
+; Caso o usu·rio pressione a chave USR_SW1, acender· o LED2. Caso o usu·rio pressione 
+; a chave USR_SW2, acender· o LED1. Caso as duas chaves sejam pressionadas, os dois 
 ; LEDs acendem.
 
 ; -------------------------------------------------------------------------------
-        THUMB                        ; Instru√ß√µes do tipo Thumb-2
+        THUMB                        ; InstruÁıes do tipo Thumb-2
 ; -------------------------------------------------------------------------------
 
 ; -------------------------------------------------------------------------------
-; √Årea de Dados - Declara√ß√µes de vari√°veis
+; ¡rea de Dados - DeclaraÁıes de vari·veis
 		AREA  DATA, ALIGN=2
-		; Se alguma vari√°vel for chamada em outro arquivo
-		;EXPORT  <var> [DATA,SIZE=<tam>]   ; Permite chamar a vari√°vel <var> a 
+		; Se alguma vari·vel for chamada em outro arquivo
+		;EXPORT  <var> [DATA,SIZE=<tam>]   ; Permite chamar a vari·vel <var> a 
 		                                   ; partir de outro arquivo
-;<var>	SPACE <tam>                        ; Declara uma vari√°vel de nome <var>
+;<var>	SPACE <tam>                        ; Declara uma vari·vel de nome <var>
                                            ; de <tam> bytes a partir da primeira 
-                                           ; posi√ß√£o da RAM		
+                                           ; posiÁ„o da RAM		
 
 TEMP_MAX_TARGET EQU 50 
 TEMP_MIN_TARGET EQU 5
 ; -------------------------------------------------------------------------------
-; √Årea de C√≥digo - Tudo abaixo da diretiva a seguir ser√° armazenado na mem√≥ria de 
-;                  c√≥digo
+; ¡rea de CÛdigo - Tudo abaixo da diretiva a seguir ser· armazenado na memÛria de 
+;                  cÛdigo
         AREA    |.text|, CODE, READONLY, ALIGN=2
 
-		; Se alguma fun√ß√£o do arquivo for chamada em outro arquivo	
-        EXPORT Start                ; Permite chamar a fun√ß√£o Start a partir de 
+		; Se alguma funÁ„o do arquivo for chamada em outro arquivo	
+        EXPORT Start                ; Permite chamar a funÁ„o Start a partir de 
 			                        ; outro arquivo. No caso startup.s
 									
-		; Se chamar alguma fun√ß√£o externa	
+		; Se chamar alguma funÁ„o externa	
         ;IMPORT <func>              ; Permite chamar dentro deste arquivo uma 
-									; fun√ß√£o <func>
+									; funÁ„o <func>
 		EXPORT sw_up
 		EXPORT sw_down
 		IMPORT PLL_Init
@@ -55,7 +55,7 @@ TEMP_MIN_TARGET EQU 5
 		IMPORT PortB_Output
 
 ; -------------------------------------------------------------------------------
-; Fun√ß√£o main()
+; FunÁ„o main()
 Start  		
 	BL PLL_Init                  ;Chama a subrotina para alterar o clock do microcontrolador para 80MHz
 	BL SysTick_Init              ;Chama a subrotina para inicializar o SysTick
@@ -68,7 +68,7 @@ Start
 	MOV R3, #0  ; contador
 	
 MainLoop
-;	Colocar a informa√ß√£o da dezena em PA7:PA4 e PQ3:PQ0  ; UDIV por 10 
+;	Colocar a informaÁ„o da dezena em PA7:PA4 e PQ3:PQ0  ; UDIV por 10 
 	PUSH {LR}
 	BL dezena_to_bcd			 
 	POP {LR}
@@ -98,7 +98,7 @@ MainLoop
 	POP {LR}
 
 
-;	Colocar a informa√ß√£o da unidade em PA7:PA4 e PQ3:PQ0  ; MLS
+;	Colocar a informaÁ„o da unidade em PA7:PA4 e PQ3:PQ0  ; MLS
 	PUSH {LR}
 	BL unidade_to_bcd			 
 	POP {LR}
@@ -128,7 +128,7 @@ MainLoop
 	POP {LR}
 
 
-;	Colocar a informa√ß√£o dos LEDs em PA7:PA4 e PQ3:PQ0;
+;	Colocar a informaÁ„o dos LEDs em PA7:PA4 e PQ3:PQ0;
 	MOV R0, R11
 	PUSH {LR}
 	BL PortA_Output
@@ -458,5 +458,5 @@ Pisca_LED
 	
 	
 	
-    ALIGN                        ;Garante que o fim da se√ß√£o est√° alinhada 
+    ALIGN                        ;Garante que o fim da seÁ„o est· alinhada 
     END                          ;Fim do arquivo
